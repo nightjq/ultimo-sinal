@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>ÚLTIMO SINAL</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+:root{
+  --bg:#000;
+  --g:#39ff14;
+  --g-dim:#1c8a0b;
+  --g-faint:rgba(57,255,20,.14);
+  --font:'VT323','Courier New',monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;background:var(--bg);color-scheme:dark}
+body{
+  margin:0;height:100%;background:var(--bg);color:var(--g);
+  font-family:var(--font);font-size:22px;line-height:1.35;
+  overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+}
+#noise{position:fixed;inset:0;width:100%;height:100%;opacity:.16;pointer-events:none;image-rendering:pixelated}
+.scan{position:fixed;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.35) 3px);
+}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.85) 100%)}
+main{
+  position:relative;min-height:100%;max-width:34rem;margin:0 auto;
+  padding:1.5rem 1.4rem 2rem;display:flex;flex-direction:column;justify-content:center;gap:2rem;
+}
+.status{display:flex;align-items:center;justify-content:space-between;color:var(--g-dim);font-size:1.1rem}
+.bars{display:inline-flex;align-items:flex-end;gap:3px;height:18px;margin-right:.5rem}
+.bars i{width:5px;background:var(--g-dim);display:block}
+.bars i:nth-child(1){height:5px}.bars i:nth-child(2){height:9px}.bars i:nth-child(3){height:13px}.bars i:nth-child(4){height:18px}
+.on .bars i{background:var(--g);box-shadow:0 0 6px var(--g)}
+h1{
+  margin:0;font-weight:400;font-size:clamp(3.4rem,17vw,5.6rem);line-height:.92;letter-spacing:.04em;
+  text-shadow:0 0 8px var(--g),0 0 28px rgba(57,255,20,.45);
+  animation:flick 1.6s steps(1) 1;
+}
+@keyframes flick{0%{opacity:0}8%{opacity:1}12%{opacity:.2}18%{opacity:1}30%{opacity:.5}34%{opacity:1}100%{opacity:1}}
+.tag{font-size:1.5rem;max-width:20ch;text-shadow:0 0 6px rgba(57,255,20,.5)}
+button{
+  font:inherit;font-size:1.9rem;letter-spacing:.2em;color:var(--g);background:transparent;
+  border:2px solid var(--g);padding:.9rem 1rem;width:100%;min-height:56px;cursor:pointer;
+  box-shadow:0 0 12px var(--g-faint),inset 0 0 12px var(--g-faint);
+  text-shadow:0 0 6px var(--g);transition:background .15s,color .15s;
+}
+button:hover,button:active{background:var(--g);color:#000;text-shadow:none}
+button:focus-visible,.in:focus-visible{outline:3px solid #fff;outline-offset:4px}
+button:disabled{opacity:.4;cursor:default;background:transparent;color:var(--g)}
+.conn{min-height:7.5rem;color:var(--g-dim)}
+.conn[hidden],.msg[hidden],.dial[hidden],#decoder[hidden]{display:none}
+.freq{font-size:3rem;color:var(--g);text-shadow:0 0 8px var(--g);letter-spacing:.06em}
+.meter{height:6px;background:var(--g-faint);margin:.6rem 0;overflow:hidden}
+.meter b{display:block;height:100%;width:0;background:var(--g);box-shadow:0 0 8px var(--g)}
+.msg{border-left:2px solid var(--g);padding-left:1rem;font-size:1.7rem;line-height:1.3;text-shadow:0 0 5px rgba(57,255,20,.55)}
+.msg small{display:block;color:var(--g-dim);font-size:1.1rem;margin-bottom:.6rem;text-shadow:none}
+.msg p{margin:0 0 .9rem}
+.msg p.res{font-size:1.2rem;color:var(--g-dim);text-shadow:none;letter-spacing:.06em}
+.cur::after{content:"█";animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.start,.hero{transition:opacity .5s}
+.gone{opacity:0;pointer-events:none;position:absolute;visibility:hidden}
+
+/* dial de frequências */
+.dial{display:flex;flex-direction:column;gap:.5rem}
+.fq{
+  display:flex;justify-content:space-between;align-items:center;gap:1rem;
+  font-size:1.35rem;letter-spacing:.05em;text-align:left;min-height:50px;padding:.5rem .8rem;
+  border:1px solid var(--g-dim);color:var(--g-dim);box-shadow:none;text-shadow:none;
+}
+.fq.heard{color:var(--g);border-color:var(--g)}
+.fq:hover,.fq:active{background:var(--g-faint);color:var(--g);text-shadow:none}
+.fq.shake{animation:shake .35s linear 1}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+/* decodificador */
+.dec{
+  align-self:flex-start;width:auto;min-height:44px;padding:.4rem 0;border:0;box-shadow:none;
+  font-size:1.1rem;letter-spacing:.2em;color:var(--g-dim);text-shadow:none;
+}
+.dec:hover,.dec:active{background:transparent;color:var(--g);text-shadow:0 0 6px var(--g)}
+#decoder{display:flex;flex-direction:column;gap:1rem;border-top:1px solid var(--g-dim);padding-top:1rem;margin-top:-1rem}
+.frags{color:var(--g-dim);font-size:1.2rem;letter-spacing:.1em}
+.row{display:flex;gap:.5rem}
+.in{
+  flex:1;min-width:0;font:inherit;font-size:1.6rem;color:var(--g);background:#021200;
+  border:1px solid var(--g);border-radius:0;padding:.6rem .8rem;text-transform:uppercase;caret-color:var(--g);
+}
+.in::placeholder{color:var(--g-dim)}
+.val{width:auto;flex:none;font-size:1.4rem;letter-spacing:.1em;padding:.6rem 1rem;min-height:50px}
+/* pistas e feedback */
+.clue{display:inline-block;width:auto;min-height:44px;padding:.3rem .6rem;margin:0 0 .9rem;border:1px dashed var(--g-dim);box-shadow:none;font-size:1.2rem;letter-spacing:.06em;text-align:left;color:var(--g-dim);text-shadow:none;animation:pulse 1.6s steps(2) infinite}
+.clue:hover,.clue:active{background:var(--g-faint);color:var(--g);text-shadow:none}
+.clue.got{animation:none;border-style:solid;border-color:var(--g);color:var(--g);cursor:default}
+.clue.got:hover{background:transparent}
+@keyframes pulse{50%{border-color:var(--g);color:var(--g);text-shadow:0 0 6px var(--g)}}
+#flash{position:fixed;inset:0;z-index:5;background:var(--g);opacity:0;pointer-events:none}
+#flash.pop{animation:pop .5s ease-out 1}
+@keyframes pop{0%{opacity:.4}100%{opacity:0}}
+main.glitch{animation:jit .45s linear 1}
+@keyframes jit{0%{transform:none}20%{transform:translate(-4px,1px);filter:brightness(2.4)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0);filter:brightness(1.6)}100%{transform:none;filter:none}}
+.in.bad{border-color:#fff;box-shadow:0 0 12px #fff;animation:shake .35s linear 1}
+.dec.hint{animation:pulse 1.2s steps(2) infinite}
+@media (prefers-reduced-motion:reduce){h1{animation:none}.cur::after{animation:none}.fq.shake,.clue,.dec.hint,#flash.pop,main.glitch,.in.bad{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="noise" aria-hidden="true"></canvas>
+<div class="scan" aria-hidden="true"></div>
+<div class="vig" aria-hidden="true"></div>
+<div id="flash" aria-hidden="true"></div>
+
+<main id="app">
+  <div class="status" aria-live="polite">
+    <span><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="st">sem sinal</span></span>
+    <span id="clock">--:--</span>
+  </div>
+
+  <section class="hero" id="hero">
+    <h1>ÚLTIMO<br>SINAL</h1>
+    <p class="tag">Nem toda transmissão deveria ter sido recebida.</p>
+  </section>
+
+  <section class="start" id="start">
+    <button id="go" type="button">SINTONIZAR</button>
+  </section>
+
+  <section class="conn" id="conn" hidden aria-live="polite">
+    <div class="freq" id="freq">87.5 MHz</div>
+    <div class="meter"><b id="bar"></b></div>
+    <div id="log">procurando portadora...</div>
+  </section>
+
+  <section class="msg" id="msg" hidden aria-live="polite">
+    <small id="meta"></small>
+    <div id="txt"></div>
+  </section>
+
+  <nav class="dial" id="dial" hidden aria-label="Frequências"></nav>
+
+  <button class="dec" id="dec" type="button" aria-expanded="false" aria-controls="decoder">DECODIFICAR</button>
+
+  <section id="decoder" hidden>
+    <div class="frags" id="frags" aria-live="polite"></div>
+    <form class="row" id="form" autocomplete="off">
+      <input class="in" id="code" type="text" inputmode="text" enterkeyhint="go" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="código" aria-label="Código secreto">
+      <button class="val" type="submit">VALIDAR</button>
+    </form>
+    <section class="msg" id="dres" hidden aria-live="polite"></section>
+  </section>
+</main>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function(id){return document.getElementById(id)};
+
+  /* ---------- ruído de rádio ---------- */
+  var cv = $('noise'), cx = cv.getContext('2d'), W, H, img;
+  function size(){
+    W = cv.width = Math.ceil(innerWidth/3); H = cv.height = Math.ceil(innerHeight/3);
+    img = cx.createImageData(W,H);
+  }
+  function noise(){
+    var d = img.data, n = d.length;
+    for(var i=0;i<n;i+=4){
+      var v = Math.random()*255;
+      d[i]=0; d[i+1]=v; d[i+2]=v*.1; d[i+3]=255;
+    }
+    cx.putImageData(img,0,0);
+  }
+  size(); addEventListener('resize',function(){size();noise()});
+  noise();
+  var last = 0, boost = 0;
+  function loop(t){
+    if(t-last>80){ noise(); last=t; }
+    cv.style.opacity = boost>0 ? .42 : .16;
+    if(boost>0) boost--;
+    requestAnimationFrame(loop);
+  }
+  if(!reduce) requestAnimationFrame(loop);
+
+  /* ---------- relógio ---------- */
+  function tick(){
+    var d=new Date();
+    $('clock').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  }
+  tick(); setInterval(tick,20000);
+
+  /* ---------- memória do visitante ---------- */
+  var KEY='ultimosinal.v2';
+  function load(){
+    var s=null;
+    try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+    if(!s||!s.heard||!s.frags) s={heard:[],frags:[]};
+    if(!s.found) s.found=s.frags.slice();
+    if(s.final===undefined) s.final=s.frags.length===3;
+    return s;
+  }
+  var S = load();
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+
+  /* ---------- transmissões ---------- */
+  var TX = {
+    1:{f:91.7,id:'0001',st:'sinal fraco',code:'FAROL',paras:[
+      'Se você está ouvindo isto, o sinal chegou.',
+      'Estamos transmitindo há quarenta e três anos para um endereço que já não existe.',
+      'Ninguém nunca respondeu.',
+      'Até agora.',
+      'Endereço de retorno: Rua do Farol, 1187.',
+      'Eu já fui lá. A rua termina no número 1100.'
+    ]},
+    2:{f:94.3,id:'0002',st:'sinal fraco',code:'1983',paras:[
+      'Continuando de onde parei.',
+      'A estação ficava no fim da rua, onde o asfalto vira barro.',
+      'O relógio da parede parou às 3h12. O calendário ao lado também: 14 de março de 1983.',
+      'Desde então a data não anda aqui dentro. Lá fora ela anda, ou parece andar.',
+      'Se houver um relógio perto de você, olhe para ele. Eu já não sei se o meu está certo.'
+    ]},
+    3:{f:102.9,id:'0003',st:'sinal instável',code:'MARA',meta:'ORIGEM: DATA FUTURA',paras:[
+      'Escute com atenção. Eu mandei isto depois de você ouvir as outras.',
+      'Para mim já aconteceu. Para você ainda não.',
+      'Vão te pedir para responder. Uma caixa pequena, uma pergunta simples. Não responda.',
+      'Quem responde ao desconhecido passa a ser o desconhecido.',
+      'Meu nome é Mara. Eu respondi.'
+    ]},
+    4:{f:108.0,id:'0004',st:'sinal desconhecido',paras:[
+      'Se você chegou até aqui, Mara não conseguiu impedir.',
+      'A linha de resposta vai abrir.',
+      'Alguém está usando o nome dela.',
+      'Perguntaram pelo número da rua.',
+      'Não responda.'
+    ]}
+  };
+  function order(){ return S.final?[1,2,3,4]:[1,2,3]; }
+
+  /* ---------- digitação ---------- */
+  var skip=false;
+  function typeOut(el, text, done, speed){
+    var p=document.createElement('p'), i=0, base=speed||32;
+    el.appendChild(p); p.className='cur';
+    try{p.scrollIntoView({block:'nearest'});}catch(e){}
+    if(reduce){ p.textContent=text; p.className=''; return done(); }
+    (function step(){
+      if(skip){ p.textContent=text; p.className=''; return setTimeout(done,60); }
+      p.textContent=text.slice(0,++i);
+      if(i<text.length){ setTimeout(step, base+Math.random()*base*1.2); }
+      else { p.className=''; setTimeout(done, skip?60:Math.max(300,base*20)); }
+    })();
+  }
+  function typeList(el, lines, done, speed){
+    var k=0;
+    (function next(){
+      if(k>=lines.length) return done&&done();
+      typeOut(el, lines[k++], next, speed);
+    })();
+  }
+  ['msg','dres'].forEach(function(id){
+    $(id).addEventListener('click',function(){ skip=true; });
+  });
+
+  /* ---------- dial ---------- */
+  var busy=false, curF=87.5;
+  function heard(n){ return S.heard.indexOf(n)>-1; }
+  function renderDial(){
+    var d=$('dial'); d.innerHTML='';
+    order().forEach(function(n){
+      var b=document.createElement('button'), h=heard(n);
+      b.type='button'; b.className='fq'+(h?' heard':''); b.id='fq'+n;
+      b.innerHTML='<span>'+TX[n].f.toFixed(1)+' MHz</span><span>'+(h?'transmissão '+TX[n].id:(n===4?'sinal novo':'fora de alcance'))+'</span>';
+      b.addEventListener('click',function(){ openTx(n); });
+      d.appendChild(b);
+    });
+    d.hidden=false;
+  }
+
+  /* ---------- sintonia ---------- */
+  function tune(n, ok, cb){
+    var t=TX[n].f, from=curF;
+    $('msg').hidden=true; $('dial').hidden=true; $('conn').hidden=false;
+    $('st').textContent='sintonizando';
+    document.body.classList.remove('on');
+    var total=reduce?4:(ok?56:34), lim=ok?total:Math.round(total*.62), k=0;
+    var logs=['procurando portadora...','ruído detectado','eco em '+t.toFixed(1)+' MHz','travando sinal...'];
+    var iv=setInterval(function(){
+      k++;
+      var p=Math.min(1,k/total);
+      var f=ok&&k>=total ? t : from+(t-from)*p+(Math.random()-.5)*14*(1-p);
+      $('freq').textContent=Math.max(87.5,f).toFixed(1)+' MHz';
+      $('bar').style.width=Math.round(p*100)+'%';
+      $('log').textContent=logs[Math.min(3,Math.floor(p*4))];
+      boost=2;
+      if(k>=lim){
+        clearInterval(iv);
+        if(ok) curF=t; else $('log').textContent='portadora ausente';
+        setTimeout(cb, reduce?0:(ok?500:900));
+      }
+    }, reduce?0:55);
+  }
+
+  function openTx(n){
+    if(busy) return;
+    busy=true; skip=false;
+    var X=TX[n], ok = n===1 || (n===4 ? S.final : heard(n-1));
+    tune(n, ok, function(){
+      $('conn').hidden=true;
+      var box=$('txt'); box.innerHTML='';
+      $('msg').hidden=false;
+      var lines;
+      if(ok){
+        $('meta').textContent='FREQ '+X.f.toFixed(1)+' — TRANSMISSÃO '+X.id+(X.meta?' — '+X.meta:'');
+        $('st').textContent=X.st; document.body.classList.add('on');
+        lines=X.paras;
+      } else {
+        $('meta').textContent='FREQ '+X.f.toFixed(1)+' — SEM PORTADORA';
+        $('st').textContent='sem portadora';
+        lines=['Nada responde nesta frequência.','Algo que veio antes dela ainda não foi ouvido.'];
+      }
+      typeList(box, lines, function(){
+        if(ok){
+          if(!heard(n)){ S.heard.push(n); save(); }
+          if(X.code) addClue(box, n-1, X.code);
+        }
+        renderDial();
+        if(!ok){ var sb=$('fq'+n); if(sb) sb.classList.add('shake'); }
+        busy=false;
+      });
+    });
+  }
+
+  $('go').addEventListener('click', function(){
+    this.disabled=true;
+    $('hero').classList.add('gone');
+    $('start').classList.add('gone');
+    openTx(1);
+  });
+
+  /* ---------- pistas e feedback ---------- */
+  function buzz(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+  function flash(){
+    var f=$('flash'); f.classList.remove('pop'); void f.offsetWidth; f.classList.add('pop');
+    boost=12; buzz([30,40,30]);
+  }
+  function bad(){
+    boost=10; buzz(120);
+    var m=document.querySelector('main'), i=$('code');
+    m.classList.remove('glitch'); i.classList.remove('bad'); void m.offsetWidth;
+    m.classList.add('glitch'); i.classList.add('bad');
+    setTimeout(function(){ m.classList.remove('glitch'); i.classList.remove('bad'); },500);
+  }
+  function addClue(box, idx, code){
+    var b=document.createElement('button'); b.type='button'; b.className='clue';
+    function show(){ b.textContent='[ ruído residual: '+code+' ]'; b.className='clue got'; }
+    if(S.found.indexOf(idx)>-1){ show(); b.setAttribute('aria-label','Fragmento capturado: '+code); }
+    else {
+      var blank=''; for(var i=0;i<code.length;i++) blank+='▒';
+      b.textContent='[ ruído residual: '+blank+' ]';
+      b.setAttribute('aria-label','Limpar ruído residual');
+      b.addEventListener('click',function(){
+        if(b.className.indexOf('got')>-1||b.dataset.w) return;
+        b.dataset.w='1';
+        var n=0, ch='ABCDEF0123456789#%&?';
+        (function spin(){
+          n++;
+          if(n<(reduce?1:10)){
+            var s=''; for(var i=0;i<code.length;i++) s+=ch.charAt(Math.floor(Math.random()*ch.length));
+            b.textContent='[ ruído residual: '+s+' ]'; boost=4; setTimeout(spin,70);
+          } else { show(); capture(idx, box); }
+        })();
+      });
+    }
+    box.appendChild(b);
+  }
+  function capture(idx, box){
+    if(S.found.indexOf(idx)<0){ S.found.push(idx); save(); }
+    renderFrags(); flash();
+    var n=S.found.length;
+    $('st').textContent='fragmento '+n+' de 3 capturado';
+    var p=document.createElement('p'); p.className='res';
+    p.textContent='Fragmento capturado ('+n+'/3).'+(n===3?' Os três estão com você. Use DECODIFICAR.':'');
+    box.appendChild(p);
+    if(n===3 && !S.final) $('dec').classList.add('hint');
+  }
+
+  /* ---------- decodificador ---------- */
+  var KEYS={FAROL:0,'1983':1,MARA:2};
+  var HID=[
+    'Fragmento aceito: o endereço. Ele nunca esteve no mapa. Esteve na antena.',
+    'Fragmento aceito: o ano. A data em que o calendário da estação parou.',
+    'Fragmento aceito: o nome. Quem é lembrado ainda pode ser encontrado.'
+  ];
+  var FINAL=[
+    'Rua do Farol, 1187. 1983. Mara.',
+    'Foi na madrugada de 14 de março de 1983, às 3h12. Mara ficou sozinha na estação para fechar o último turno.',
+    'Naquela noite a rua deixou de constar nos mapas. Ela também.',
+    'Mara não fugiu e não morreu. Ela entendeu o que ouvia no rádio: um aviso que sempre chega tarde.',
+    'Então ficou dentro do sinal, para avisar quem ainda pudesse escutar. Cada transmissão que você ouviu é ela.',
+    'Você juntou o endereço, o ano e o nome. Ninguém tinha feito isso em quarenta e três anos.',
+    'Mara pede uma coisa só: quando abrirem a linha de resposta, não responda.'
+  ];
+  function renderFrags(){
+    var m=''; for(var i=0;i<3;i++) m+=S.found.indexOf(i)>-1?'■ ':'□ ';
+    $('frags').textContent='fragmentos  '+m;
+  }
+  renderFrags();
+  if(S.found.length===3 && !S.final) $('dec').classList.add('hint');
+
+  $('dec').addEventListener('click',function(){
+    var d=$('decoder'), open=d.hidden;
+    this.classList.remove('hint');
+    d.hidden=!open; this.setAttribute('aria-expanded',open?'true':'false');
+    if(open){ $('code').focus(); try{d.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});}catch(e){} }
+  });
+
+  function norm(s){
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim().split(' ');
+  }
+
+  $('form').addEventListener('submit',function(e){
+    e.preventDefault();
+    var inp=$('code'), v=inp.value; inp.value='';
+    if(!v.trim()) return;
+    var found=[];
+    norm(v).forEach(function(t){
+      if(Object.prototype.hasOwnProperty.call(KEYS,t) && found.indexOf(KEYS[t])<0) found.push(KEYS[t]);
+    });
+    var res=$('dres'), lines=[], meta=null, sp=26;
+    skip=false; res.innerHTML=''; res.hidden=false;
+    var okf=found.filter(function(i){return S.found.indexOf(i)>-1}), after=null;
+    if(found.length===3 && S.found.length===3){
+      if(found[0]===0 && found[1]===1 && found[2]===2){
+        S.final=true; save(); $('dec').classList.remove('hint');
+        meta='ARQUIVO MARA — TRANSMISSÃO 0000';
+        lines=FINAL.concat(['Uma nova frequência surgiu no dial.']); sp=22;
+        boost=12; buzz([60,40,60,40,120]);
+        after=function(){ if(!$('dial').hidden) renderDial(); };
+      } else {
+        lines=['Os fragmentos estão certos, mas a ordem não. Siga a ordem das frequências.']; bad();
+      }
+    } else if(!okf.length || found.length===3){
+      lines=['Sem correspondência. Continue ouvindo.']; bad();
+    } else {
+      var fresh=okf.filter(function(i){return S.frags.indexOf(i)<0});
+      fresh.forEach(function(i){ S.frags.push(i); });
+      if(fresh.length) save();
+      lines=fresh.length ? fresh.map(function(i){return HID[i]}) : ['Fragmento já registrado.'];
+      var r=3-S.found.length;
+      lines.push(r ? 'Falta'+(r>1?'m ':' ')+r+' fragmento'+(r>1?'s':'')+' para encontrar.' : 'Os três fragmentos estão com você. Digite-os juntos, na ordem das frequências.');
+    }
+    if(meta){ var s=document.createElement('small'); s.textContent=meta; res.appendChild(s); }
+    typeList(res, lines, after, sp);
+  });
+})();
+</script>
+</body>
+</html>
